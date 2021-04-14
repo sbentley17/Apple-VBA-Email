@@ -6,7 +6,7 @@ Function MailWithMacOutlookWorkbook(subject As String, mailbody As String, _
     accounttype As String, accountname As String, _
     attachment As String)
     'Function to create a mail with the activeworkbook
-    ' Ron de Bruin : 11-Dec-2020
+    ' Ron de Bruin 
     Dim fileattachment As String
     Dim ScriptStr As String, RunMyScript As String
 
