@@ -1,0 +1,73 @@
+Dim KeyCells As Range
+    Dim strbody As String
+    Dim TempFileName As String
+    Dim SourceWb As Workbook
+    Dim Destwb As Workbook
+    
+Private Sub Worksheet_Change(ByVal Target As Range)
+       
+       'In the range parenthesis, specify what area to consider for changes to the worksheet
+       
+        If Not Intersect(Target, Range("I9:L1000")) Is Nothing Then
+            nconfirmation = MsgBox("Would you like to send an email to notify of change?", vbInformation + vbYesNo, "Mail Sheet Updates")
+                 If nconfirmation = vbNo Then
+                    Exit Sub
+                End If
+                
+                Set Source = Nothing
+                On Error Resume Next
+                Set Source = Selection.SpecialCells(xlCellTypeVisible)
+                On Error GoTo 0
+                
+                Set SourceWb = ActiveWorkbook
+                Set Destwb = Workbooks.Add(xlWBATWorksheet)
+                
+                TempFileName = "Selection of " & SourceWb.Name & " " _
+                    & Format(Now, "dd-mmm-yy h-mm-ss")
+                    
+                strbody = "<FONT size=""3"" face=""Calibri"">"
+                
+                'Here you can specify the email body using the contents of the cells that have changed
+
+                strbody = strbody & "Hi there," & "<br>" & "<br>" & _
+                    "The Vendor " & Range("C" & Target.Row).Value & " has been updated to " & Target.Value & "<br>"
+
+
+                strbody = strbody & "</FONT>"
+                'Here you will enter the terget columns, as well as the recipients email address
+                
+                If (Target.Column) = 10 Then
+                    MailRecip = "Recipient@gmail.com"
+            
+                Else
+                    MailRecip = "recipient@gmail.com"
+                End If
+                
+                
+                
+                
+                MailWithMacOutlookWorkSheetSelection _
+                subject:="Cadence Print Tracking", _
+                mailbody:=strbody, _
+                toaddress:=(MailRecip), _
+                ccaddress:="", _
+                bccaddress:="", _
+                
+                'By changing display mail to yes, the email will preview before sending, changing to no will send automatically
+                
+                displaymail:="yes", _
+                accounttype:="", _
+                accountname:="", _
+                attachment:=TempFileName, _
+                FileFormat:=SourceWb.FileFormat
+
+                With Application
+                .ScreenUpdating = True
+                .EnableEvents = True
+                End With
+
+ 
+        End If
+    End Sub
+        
+            
