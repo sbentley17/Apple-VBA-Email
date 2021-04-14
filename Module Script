@@ -1,0 +1,150 @@
+Option Explicit
+
+Function MailWithMacOutlookWorkbook(subject As String, mailbody As String, _
+    toaddress As String, ccaddress As String, _
+    bccaddress As String, displaymail As String, _
+    accounttype As String, accountname As String, _
+    attachment As String)
+    'Function to create a mail with the activeworkbook
+    ' Ron de Bruin : 11-Dec-2020
+    Dim fileattachment As String
+    Dim ScriptStr As String, RunMyScript As String
+
+    'Build the AppleScriptTask parameter string
+    fileattachment = attachment
+    ScriptStr = subject & ";" & mailbody & ";" & toaddress & ";" & ccaddress & ";" & _
+                bccaddress & ";" & displaymail & ";" & accounttype & ";" & _
+                accountname & ";" & fileattachment
+
+    'Call the RDBMacOutlook.scpt script file with the AppleScriptTask function
+    RunMyScript = AppleScriptTask("RDBMacOutlook.scpt", "CreateMailInOutlook", CStr(ScriptStr))
+
+End Function
+
+
+Function MailWithMacOutlookWorkSheetSelection(subject As String, mailbody As String, _
+    toaddress As String, ccaddress As String, _
+    bccaddress As String, displaymail As String, _
+    accounttype As String, accountname As String, _
+    attachment As String, FileFormat As Long)
+    'Function to create a mail with the activesheet,sheets or selection
+    ' Ron de Bruin : 11-Dec-2020
+
+    Dim FileExtStr As String, FileFormatNum As Long
+    Dim TempFilePath As String, fileattachment As String
+    Dim ScriptStr As String, RunMyScript As String
+
+'if version 16 it will follow the Win Excel formats numbers
+ If Val(Application.Version) >= 16 Then
+    Select Case FileFormat
+            Case 51: FileExtStr = ".xlsx": FileFormatNum = 51
+            Case 52:
+                If ActiveWorkbook.HasVBProject Then
+                    FileExtStr = ".xlsm": FileFormatNum = 52
+                Else
+                    FileExtStr = ".xlsx": FileFormatNum = 51
+                End If
+            Case 56: FileExtStr = ".xls": FileFormatNum = 56
+            Case Else: FileExtStr = ".xlsb": FileFormatNum = 50
+    End Select
+Else
+'Version 15 of Excel 2016 = +1
+    Select Case FileFormat
+        Case 52: FileExtStr = ".xlsx": FileFormatNum = 52
+        Case 53:
+            If ActiveWorkbook.HasVBProject Then
+                FileExtStr = ".xlsm": FileFormatNum = 53
+            Else
+                FileExtStr = ".xlsx": FileFormatNum = 52
+            End If
+        Case 57: FileExtStr = ".xls": FileFormatNum = 57
+        Case Else: FileExtStr = ".xlsb": FileFormatNum = 51
+    End Select
+  End If
+
+    ' Save the new temporary workbook and close it
+    TempFilePath = CreateFolderinMacOffice(NameFolder:="RDBMailTempFolder")
+
+    With ActiveWorkbook
+        .SaveAs TempFilePath & Application.PathSeparator & attachment & FileExtStr, FileFormat:=FileFormatNum
+        .Close SaveChanges:=False
+    End With
+
+    'Build the AppleScriptTask parameter string
+    fileattachment = TempFilePath & Application.PathSeparator & attachment & FileExtStr
+    ScriptStr = subject & ";" & mailbody & ";" & toaddress & ";" & ccaddress & ";" & _
+                bccaddress & ";" & displaymail & ";" & accounttype & ";" & _
+                accountname & ";" & fileattachment
+
+    'Call the RDBMacOutlook.scpt script file with the AppleScriptTask function
+    RunMyScript = AppleScriptTask("RDBMacOutlook.scpt", "CreateMailInOutlook", CStr(ScriptStr))
+
+    'Delete the file we just mailed
+     Kill fileattachment
+End Function
+
+Function CreateFolderinMacOffice(NameFolder As String) As String
+    'Function to create folder if it not exists in the Microsoft Office Folder
+    'Ron de Bruin : 13-July-2020 (renamed the function)
+    Dim OfficeFolder As String
+    Dim PathToFolder As String
+    Dim TestStr As String
+
+    OfficeFolder = MacScript("return POSIX path of (path to desktop folder) as string")
+    OfficeFolder = Replace(OfficeFolder, "/Desktop", "") & _
+        "Library/Group Containers/UBF8T346G9.Office/"
+
+    PathToFolder = OfficeFolder & NameFolder
+
+    On Error Resume Next
+    TestStr = Dir(PathToFolder & "*", vbDirectory)
+    On Error GoTo 0
+    If TestStr = vbNullString Then
+        MkDir PathToFolder
+        'You can use this msgbox line for testing if you want
+        'MsgBox "You find the new folder in this location :" & PathToFolder
+    End If
+    CreateFolderinMacOffice = PathToFolder
+End Function
+
+
+
+Function CheckAppleScriptTaskExcelScriptFile(ScriptFileName As String) As Boolean
+    'Function to Check if the AppleScriptTask script file exists
+    'Ron de Bruin : 6-March-2016
+    Dim AppleScriptTaskFolder As String
+    Dim TestStr As String
+
+    AppleScriptTaskFolder = MacScript("return POSIX path of (path to desktop folder) as string")
+    AppleScriptTaskFolder = Replace(AppleScriptTaskFolder, "/Desktop", "") & _
+        "Library/Application Scripts/com.microsoft.Excel/"
+
+    On Error Resume Next
+    TestStr = Dir(AppleScriptTaskFolder & ScriptFileName, vbDirectory)
+    On Error GoTo 0
+    If TestStr = vbNullString Then
+        CheckAppleScriptTaskExcelScriptFile = False
+    Else
+        CheckAppleScriptTaskExcelScriptFile = True
+    End If
+End Function
+
+
+
+Public Function ClearMacClipBoard() As Boolean
+        'Clear the Mac Clipboard - J.E. McGimpsey
+        'http:www.mcgimpsey.com/macoffice/excel/clearclipboard.html
+        Dim myDO As DataObject
+
+        On Error GoTo EndCMCB
+        Set myDO = New DataObject
+        myDO.SetText ""
+        myDO.PutInClipboard
+        Application.CutCopyMode = False
+        ClearMacClipBoard = True
+EndCMCB:
+        On Error GoTo 0
+    End Function
+
+
+
